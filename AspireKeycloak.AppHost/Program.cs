@@ -12,5 +12,12 @@ var apiService = builder.AddProject<Projects.AspireKeycloak_ApiService>("apiserv
 //     .WithReference(keycloak)
 //     .WithReference(apiService);
 
+builder.AddProject<Projects.AspireKeycloak_Web>("aspirekeycloak-web");
+
+// builder.AddProject<Projects.Keycloak_Web>("webfrontend")
+//     .WithExternalHttpEndpoints()
+//     .WithReference(keycloak)
+//     .WithReference(apiService);
+
 builder.Build().Run();
 

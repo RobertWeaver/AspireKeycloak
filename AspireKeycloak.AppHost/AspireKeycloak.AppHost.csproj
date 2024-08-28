@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AspireKeycloak.ApiService\AspireKeycloak.ApiService.csproj" />
+    <ProjectReference Include="..\AspireKeycloak.Web\AspireKeycloak.Web.csproj" />
   </ItemGroup>
 
 </Project>
