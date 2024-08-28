@@ -13,4 +13,8 @@
     <PackageReference Include="Aspire.Hosting.AppHost" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AspireKeycloak.ApiService\AspireKeycloak.ApiService.csproj" />
+  </ItemGroup>
+
 </Project>
