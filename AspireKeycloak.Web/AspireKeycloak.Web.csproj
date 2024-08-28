@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AspireProjectOrPackageReference Include="Aspire.Keycloak.Authentication" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AspireKeycloak.ServiceDefaults\AspireKeycloak.ServiceDefaults.csproj" />
   </ItemGroup>
 
