@@ -1,13 +1,17 @@
+using System.Security.Claims;
+using System.Text.Json;
+using AspireKeycloak.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Microsoft.Extensions.Hosting;
+namespace AspireKeycloak.ServiceDefaults;
 
 // Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
 // This project should be referenced by each service project in your solution.
@@ -107,5 +111,30 @@ public static class Extensions
         }
 
         return app;
+    }
+
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
+    public static void AddRealmRoles(this ClaimsIdentity identity, string? realmAccessJson)
+    {
+        if (string.IsNullOrEmpty(realmAccessJson))
+        {
+            return;
+        }
+
+        try
+        {
+            var realmAccess = JsonSerializer.Deserialize<RealmAccess>(realmAccessJson, JsonSerializerOptions);
+            if (realmAccess?.Roles != null)
+            {
+                foreach (var role in realmAccess.Roles)
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Role, role));
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Log error if needed, but avoid crashing the app
+        }
     }
 }

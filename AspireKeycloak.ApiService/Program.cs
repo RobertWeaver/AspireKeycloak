@@ -1,3 +1,7 @@
+using AspireKeycloak.ApiService;
+using AspireKeycloak.ServiceDefaults;
+using Microsoft.AspNetCore.Authentication;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire components.
@@ -9,16 +13,24 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAuthentication()
                 .AddKeycloakJwtBearer("keycloak", realm: "WeatherShop", options =>
                 {
-                    options.RequireHttpsMetadata = false;
+                    // Require HTTPS metadata only in production
+                    options.RequireHttpsMetadata = builder.Environment.IsProduction();
                     options.Audience = "weather.api";
                 });
 
-builder.Services.AddAuthorizationBuilder();
+builder.Services.AddTransient<IClaimsTransformation, RoleClaimsTransformation>();
+
+// Add authorization builder and define a role-based policy
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("forcaster", policy => policy.RequireRole("forcaster")); // Define the "Forcaster" policy
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseExceptionHandler();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error");
+}
 
 var summaries = new[]
 {
@@ -37,13 +49,13 @@ app.MapGet("/weatherforecast", () =>
         .ToArray();
     return forecast;
 })
-.RequireAuthorization();
+.RequireAuthorization("forcaster");
 
 app.MapDefaultEndpoints();
 
 app.Run();
 
-sealed record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+internal sealed record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }

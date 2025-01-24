@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using AspireKeycloak.ServiceDefaults;
 using AspireKeycloak.Web;
 using AspireKeycloak.Web.Components;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -27,20 +29,41 @@ builder.Services.AddHttpClient<WeatherApiClient>(client =>
     })
     .AddHttpMessageHandler<AuthorizationHandler>();
 
-var oidcScheme = OpenIdConnectDefaults.AuthenticationScheme;
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme) // Register the Cookie authentication handler
+.AddKeycloakOpenIdConnect("keycloak", realm: "WeatherShop", OpenIdConnectDefaults.AuthenticationScheme, options =>
+{
+    options.ClientId = "WeatherWeb";
+    options.ResponseType = OpenIdConnectResponseType.Code;
+    options.Scope.Add("weather:all");
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
+    options.SaveTokens = true;
+    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme; // Ensure cookies are used for sign-in
 
-builder.Services.AddAuthentication(oidcScheme)
-                .AddKeycloakOpenIdConnect("keycloak", realm: "WeatherShop", oidcScheme, options =>
-                {
-                    options.ClientId = "WeatherWeb";
-                    options.ResponseType = OpenIdConnectResponseType.Code;
-                    options.Scope.Add("weather:all");
-                    options.RequireHttpsMetadata = false;
-                    options.TokenValidationParameters.NameClaimType = JwtRegisteredClaimNames.Name;
-                    options.SaveTokens = true;
-                    options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                })
-                .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme);
+    options.Events.OnTokenValidated = context =>
+    {
+        var identity = context.Principal?.Identity as ClaimsIdentity;
+        if (identity == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (context.SecurityToken is JwtSecurityToken token)
+        {
+            var realmAccessClaim = token.Claims.FirstOrDefault(c => c.Type == "realm_access");
+            identity.AddRealmRoles(realmAccessClaim?.Value);
+        }
+
+        return Task.CompletedTask;
+    };
+
+});
 
 builder.Services.AddCascadingAuthenticationState();
 
